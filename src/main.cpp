@@ -103,7 +103,40 @@ void imageProcessing(VideoCapture *cap) {
     // Convert Mat from opencv to OpenGl's Texture2D
     cv::absdiff(blurredframe, currentframe, toTexture);
 
-    // EDGE DETECTOR ?
+    /* CHATGPT:
+    To find and track a Rubik's Cube in a camera feed and determine its colors, you can use a combination of computer
+     vision techniques. Here's a high-level overview of the process:
+
+    Object Detection: Use a pre-trained object detection model (like YOLO, SSD, or Faster R-CNN) to detect the Rubik's
+     Cube in the camera feed. Train the model on images of Rubik's Cubes to recognize its shape and appearance.
+
+    Feature Extraction: Once the cube is detected, extract its features such as corners or edges using techniques like
+     image segmentation or contour detection. This step helps in accurately identifying the cube's boundaries.
+
+    Cube Orientation Estimation: Determine the orientation of the cube in the camera feed to ensure consistent color
+     detection. This might involve perspective transformation or geometric calculations to correct for tilts or rotations.
+
+    Color Detection: Divide the cube's surface into individual squares and analyze each square to determine its color.
+     Techniques like color thresholding, clustering, or neural networks can be used for color detection.
+
+    Color Classification: Classify the detected colors into the standard Rubik's Cube color set (e.g., white, yellow,
+     red, orange, blue, green). This could be achieved using machine learning classifiers or lookup tables.
+
+    Cube State Representation: Represent the detected colors as a 3D matrix or array, mimicking the layout of a solved
+     Rubik's Cube. This representation will be used for solving the cube algorithmically.
+
+    Continuous Tracking: Implement a tracking algorithm to continuously monitor the cube's movement within the camera
+     feed. This could involve techniques like Kalman filtering, optical flow, or feature tracking to predict and
+     update the cube's position in subsequent frames.
+
+    Feedback and Calibration: Implement mechanisms for user feedback and calibration to refine the detection and
+     tracking accuracy. This could involve manual corrections or adaptive algorithms that learn from user interactions.
+
+    By combining these image processing techniques, you can create a robust system for detecting, tracking, and
+     analyzing a Rubik's Cube through a camera feed. However, keep in mind that lighting conditions, occlusions,
+     and other environmental factors may affect the system's performance, so robustness testing and optimization are
+     crucial.
+     */
 
     cv::flip(toTexture, toTexture, 0);
 
