@@ -20,33 +20,115 @@ const unsigned int SCR_HEIGHT = 600;
 
 using namespace cv;
 
+// index of our texture / camera feed
 GLuint textureID;
 
+// index of our shaders
 GLuint shaderProgram;
 
-unsigned int VBO, VAO;
+/*
+ * VBO: Vertex Buffer Object    ->
+ * VAO: Vertex Array Object     ->
+ * EBO: Element Buffer Object   -> Used to say which vertex goes to which triangle
+ */
+unsigned int VBO, VAO, EBO;
 
+/*
+ * Generate the texture and set the texture's parameter.
+ */
 void initTexture() {
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 }
 
+/*
+ * Initialize the background mesh
+ */
+void initBackground() {
+    float vertices[] = {
+            // positions                        // colors                       // texture coords
+            1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+            1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+            -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+            -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
+    };
+
+    unsigned int indices[] = {
+            0, 1, 3, // first triangle
+            1, 2, 3  // second triangle
+    };
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // texture coord attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindVertexArray(0);
+}
+
+void imageProcessing(VideoCapture *cap) {
+    Mat toTexture;
+
+    // Read camera
+    Mat currentframe;
+    cap->read(currentframe);
+
+    // Image Processing
+    Mat blurredframe;
+    cv::GaussianBlur(currentframe, blurredframe, cv::Size(0,0), 1.6, 0);
+
+    // Convert Mat from opencv to OpenGl's Texture2D
+    cv::absdiff(blurredframe, currentframe, toTexture);
+
+    // EDGE DETECTOR ?
+
+    cv::flip(toTexture, toTexture, 0);
+
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, toTexture.cols, toTexture.rows, 0, GL_BGR, GL_UNSIGNED_BYTE, toTexture.ptr());
+    glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+/*
+ * Render Loop
+ */
 void render() {
     // Clear Screen
     glClearColor(.5, .5, .5, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Shader
-    glUseProgram(shaderProgram);
-    glActiveTexture(GL_TEXTURE0);
+    // Texture
     glBindTexture(GL_TEXTURE_2D, textureID);
 
+    // Shader
+    glUseProgram(shaderProgram);
+
+    // Draw triangles
     glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 int main()
@@ -99,30 +181,7 @@ int main()
 
     initTexture();
 
-    float vertices[] = {
-            // Positions
-            -1.0f, -1.0f, 0.0f,
-            1.0f, -1.0f, 0.0f,
-            0.0f,  1.0f, 0.0f
-    };
-
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    glBindVertexArray(0);
+    initBackground();
 
     // render loop
     // -----------
@@ -132,14 +191,7 @@ int main()
 
         // camera
         // ------
-        Mat currentframe;
-        cap.read(currentframe);
-
-        cv::flip(currentframe, currentframe, 0);
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, currentframe.cols, currentframe.rows, 0, GL_BGR, GL_UNSIGNED_BYTE, currentframe.ptr());
-        glGenerateMipmap(GL_TEXTURE_2D);
+        imageProcessing(&cap);
 
         // do the rendering
         render();
