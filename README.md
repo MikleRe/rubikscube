@@ -1,4 +1,4 @@
-# Rubik's Cube Solver
+# Rubik's Cube Solver WIP
 An OpenGL App developped to solve Rubik's Cube using Image Processing and Computer Graphics.
 
 Made by Dan Simonin
